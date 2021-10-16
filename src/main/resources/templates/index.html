@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>환율 계산</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js" integrity="sha512-37T7leoNS06R80c8Ulq7cdCDU5MNQBwlYoy1TX/WUsLFC2eYNqtKlV0QjH7r8JpG/S0GUMZwebnVFLPd6SU5yg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/localization/messages_ko.min.js" integrity="sha512-/3NL2sam0pISKsLqH0po++lL8/zIUvuJhcGJ7XtK5KfRllbIt15Yqp8t23dPPH6qCf2x83LQHSODpP61uhXtqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+<header>
+	<h1>환율 계산</h1>
+</header>
+
+<form id="content" action="./getReceivingAmount" method="POST">
+	<div id="source_box">
+		송금국가 : <span th:text="|${source.name} (${source.code})|" ></span>
+		
+		<input type="hidden" id="source" name="source" th:value="${source.code}" />
+	</div>
+	
+	<div id="receive_box">
+		수취국가 : 
+		<select id="receive_select" name="receive">
+			<option th:each="country : ${countries}" th:value="${country.code}" th:text="|${country.name} (${country.code})|"></option>
+		</select>
+		
+		<input type="hidden" name="currencies" th:value="${currencies}"/>
+	</div>
+	
+	<div id="rate_box">
+		환율 :
+		<span id="rate"></span>
+		<span id="rateCode" th:text="|${countries[0].code}/${source.code}|"></span>
+		
+		<input type="hidden" name="rate" />
+	</div>
+	
+	<div id="remittance_box">
+		송금액 :
+		<input type="number" name="remittance"/>
+		<span th:text="${source.code}"></span>
+	</div>
+	
+	<br><br>
+	<div id="live_box">
+		<label for="live_check">실시간</label>
+		<input type="checkbox" value="true" name="live" id="live_check"/>
+	</div>
+	<button type="submit">SUBMIT</button>
+</form>
+
+<br>
+<div id="result_box" style="display: none;">
+	수취금액은
+	<span id="result_amount"></span>
+	<span id="result_code"></span>
+	입니다.
+</div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+	//환율, 수치금액 숫자 형식
+	const formatter = new Intl.NumberFormat("en-US", {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2
+	});
+	
+	//환율 수치 바꾸는 함수
+	function changeRateNum() {
+		let source = $("#source").val();
+		let country = $("#receive_select option:selected").val();
+		let rateCode = country + "/" + source;
+		
+		$("#rate").text(formatter.format(rateData[source + country]));
+		$("#rateCode").text(rateCode);
+		$("input[name=rate]").val(rateData[source + country]);
+	}
+	
+	//페이지 로드 후 환율 불러오기
+	var rateData = null;
+	function getExchangeRate() {
+		$.ajax({
+			type: "POST"
+			, url: "./getExchangeRate"
+			, async: false
+			, contentType: "application/x-www-form-urlencoded" 
+			, data: JSON.stringify($("#content").serialize())
+			, dataType: "json"
+			, success: function(data) {
+				rateData = data;
+	
+				changeRateNum();
+			}, error: function(e) {
+				console.log(e);
+			}
+		});
+	}
+	getExchangeRate();
+	
+	//수취국가 변경 시 환율 값 변경 및 결과 박스 숨김
+	$("#receive_select").on("change", function() {
+		changeRateNum();
+		$("#result_box").hide();
+	});
+	
+	//송금액 submit 시 유효성 검사 및 결과 출력
+	$("#content").on("submit", function(e) {
+		//페이지 이동 방지
+		e.preventDefault();
+	}).validate({
+		rules: {
+			remittance: {
+				required: true
+				, digits: true
+				, min: 0
+				, max: 10000
+			}
+		},
+		messages: {
+			remittance: {
+				required: "송금액이 바르지 않습니다"
+				, digits: "송금액이 바르지 않습니다"
+				, min: "송금액이 바르지 않습니다"
+				, max: "송금액이 바르지 않습니다"
+			}
+		},
+		submitHandler: function(form) {
+			let formData = new FormData(form);
+			
+			if(formData.get("live")) {
+				getExchangeRate();
+			}
+			
+			$.ajax({
+				type: "POST"
+				, url: "./getReceivingAmount"
+				, data: {
+					"remittance" : formData.get("remittance")
+					, "rate" : formData.get("rate")
+				}
+				, success: function(data) {
+					$("#result_box").show();
+					$("#result_amount").text(formatter.format(data));
+					$("#result_code").text($("#receive_select option:selected").val());
+				}, error: function(e) {
+					console.log(e);
+				}
+			});
+		},
+		errorPlacement: function(error, element) {
+			error.insertAfter($("#remittance_box"));
+			error.css("color", "red");
+		}
+	});
+});
+</script>
+</body>
+</html>
