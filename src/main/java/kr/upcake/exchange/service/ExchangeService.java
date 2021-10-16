@@ -1,7 +1,9 @@
 package kr.upcake.exchange.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -16,21 +18,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.upcake.exchange.dto.CountryDTO;
 import kr.upcake.exchange.dto.CurrencyAPIRequestDTO;
 import kr.upcake.exchange.dto.CurrencyAPIResponseDTO;
+import kr.upcake.exchange.enums.CurrencyEnum;
 
 @Service
 public class ExchangeService {
 	//송금 국가 설정
 	public CountryDTO getSource() {
-		CountryDTO usa = new CountryDTO("미국", "USD");
-		
-		return usa;
+		return new CountryDTO(CurrencyEnum.USD.getLabel(), CurrencyEnum.USD.name());
 	}
 	
 	//수취 국가 설정
 	public List<CountryDTO> getCountries() {
-		CountryDTO korea = new CountryDTO("한국", "KRW");
-		CountryDTO japan = new CountryDTO("일본", "JPY");
-		CountryDTO philippines = new CountryDTO("필리핀", "PHP");
+		CountryDTO korea = new CountryDTO(CurrencyEnum.KRW.getLabel(), CurrencyEnum.KRW.name());
+		CountryDTO japan = new CountryDTO(CurrencyEnum.JPY.getLabel(), CurrencyEnum.JPY.name());
+		CountryDTO philippines = new CountryDTO(CurrencyEnum.PHP.getLabel(), CurrencyEnum.PHP.name());
 		
 		List<CountryDTO> countries = new ArrayList<>();
 		countries.add(korea);
@@ -41,12 +42,14 @@ public class ExchangeService {
 	}
 	
 	//API용 currencies 변수 작성
-	public String getCurrencies(List<CountryDTO> countries) {
-		StringBuilder sb = new StringBuilder();
-		for(CountryDTO i : countries) {
-			sb.append(i.getCode() + ",");
-		}
-		String currencies = sb.toString();
+	public String getCurrencies(CurrencyEnum source) {
+		CurrencyEnum[] values = CurrencyEnum.values();
+		
+		String currencies =
+			Arrays.stream(values)
+				.filter(e -> !e.equals(source))
+				.map(Enum::name)
+				.collect(Collectors.joining(","));
 		
 		return currencies;
 	}
@@ -54,15 +57,15 @@ public class ExchangeService {
 	//환율 요청 API
 	public CurrencyAPIResponseDTO getCurrencyAPIRequest(CurrencyAPIRequestDTO params) {
 		String baseURL = "http://apilayer.net/api/live";
-		final String ACCESS_KEY = "697130d30742360c6d3c5d3d87ca7dea";
+		String accessKey = "697130d30742360c6d3c5d3d87ca7dea"; 
 
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
 		
 		UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseURL)
-				.queryParam("access_key", ACCESS_KEY)
+				.queryParam("access_key", accessKey)
 				.queryParam("source", params.getSource())
-				.queryParam("currencies", params.getCurrencies())
+				.queryParam("currencies", getCurrencies(params.getSource()))
 				.queryParam("format", 1);
 		
 		HttpEntity<?> entity = new HttpEntity<>(headers);

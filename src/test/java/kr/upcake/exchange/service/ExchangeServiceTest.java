@@ -1,4 +1,4 @@
-package kr.upcake.exchange.service;
+package kr.upcake.exchange.service; 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -9,6 +9,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import kr.upcake.exchange.dto.CurrencyAPIRequestDTO;
 import kr.upcake.exchange.dto.CurrencyAPIResponseDTO;
+import kr.upcake.exchange.enums.CurrencyEnum;
 
 @ExtendWith(SpringExtension.class)
 class ExchangeServiceTest {
@@ -18,7 +19,7 @@ class ExchangeServiceTest {
 	@Test
 	void testGetCurrencyAPIRequest() {
 		//Given
-		CurrencyAPIRequestDTO requestDTO = new CurrencyAPIRequestDTO("USD", "KRW,JPY,PHP");
+		CurrencyAPIRequestDTO requestDTO = new CurrencyAPIRequestDTO(CurrencyEnum.USD);
 		
 		//When
 		CurrencyAPIResponseDTO responseDTO = exService.getCurrencyAPIRequest(requestDTO);

@@ -5,7 +5,6 @@
 <title>환율 계산</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-serialize-object/2.5.0/jquery.serialize-object.min.js" integrity="sha512-Gn0tSSjkIGAkaZQWjx3Ctl/0dVJuTmjW/f9QyB302kFjU4uTNP4HtA32U2qXs/TRlEsK5CoEqMEMs7LnzLOBsA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js" integrity="sha512-37T7leoNS06R80c8Ulq7cdCDU5MNQBwlYoy1TX/WUsLFC2eYNqtKlV0QjH7r8JpG/S0GUMZwebnVFLPd6SU5yg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 
@@ -14,7 +13,7 @@
 	<h1>환율 계산</h1>
 </header>
 
-<form id="content" action="./getReceivingAmount" method="POST">
+<form id="content" action="./getReceivingAmount" method="GET">
 	<div id="source_box">
 		송금국가 : <span th:text="|${source.name} (${source.code})|" ></span>
 		
@@ -26,8 +25,6 @@
 		<select id="receive_select" name="receive">
 			<option th:each="country : ${countries}" th:value="${country.code}" th:text="|${country.name} (${country.code})|"></option>
 		</select>
-		
-		<input type="hidden" name="currencies" th:value="${currencies}"/>
 	</div>
 	
 	<div id="rate_box">
@@ -83,12 +80,12 @@ $(document).ready(function() {
 	var rateData = null;
 	function getExchangeRate() {
 		$.ajax({
-			type: "POST"
+			type: "GET"
 			, url: "./getExchangeRate"
 			, async: false
-			, contentType: "application/json" 
-			, data: JSON.stringify($("#content").serializeObject())
-			, dataType: "json"
+			, data: {
+				"source" : $("#source").val()
+			}
 			, success: function(data) {
 				rateData = data.quotes;
 	
@@ -135,7 +132,7 @@ $(document).ready(function() {
 			}
 			
 			$.ajax({
-				type: "POST"
+				type: "GET"
 				, url: "./getReceivingAmount"
 				, data: {
 					"remittance" : formData.get("remittance")
